@@ -1,0 +1,32 @@
+	
+questions	
+0	
+id	1
+text	
+ru	"Ваш любимый цвет?"
+uz	"Sevimli rangingiz qanday?"
+en	"What is your favorite color?"
+type	"choice"
+options	
+ru	
+0	"Красный"
+1	"Синий"
+2	"Зелёный"
+3	"Другое"
+uz	
+0	"Qizil"
+1	"Ko‘k"
+2	"Yashil"
+3	"Boshqa"
+en	
+0	"Red"
+1	"Blue"
+2	"Green"
+3	"Other"
+1	
+id	2
+text	
+ru	"Ваш любимый фильм?"
+uz	"Sevimli filmingiz qaysi?"
+en	"What is your favorite movie?"
+type	"text"

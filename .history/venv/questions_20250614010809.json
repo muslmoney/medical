@@ -1,0 +1,39 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "type": "choice",
+      "text": {
+        "ru": "Какой ваш любимый цвет?",
+        "uz": "Sevimli rangingiz qaysi?",
+        "en": "What is your favorite color?"
+      },
+      "options": {
+        "ru": ["Красный", "Синий", "Зелёный"],
+        "uz": ["Qizil", "Ko'k", "Yashil"],
+        "en": ["Red", "Blue", "Green"]
+      }
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "text": {
+        "ru": "Напишите отзыв:",
+        "uz": "Fikringizni yozing:",
+        "en": "Leave a comment:"
+      },
+      "options": {}
+    },
+    {
+      "id": 3,
+      "type": "text",
+      "text": {
+        "ru": "Что бы вы хотели улучшить?",
+        "uz": "Nimani yaxshilashni istardingiz?",
+        "en": "What would you like to improve?"
+      },
+      "options": {}
+    }
+  ],
+  "answers": {}
+}

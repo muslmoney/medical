@@ -1,0 +1,29 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "type": "text",
+      "text": {
+        "ru": "Как вас зовут?",
+        "uz": "Ismingiz nima?",
+        "en": "What is your name?"
+      },
+      "options": {}
+    },
+    {
+      "id": 2,
+      "type": "choice",
+      "text": {
+        "ru": "Какой у вас пол?",
+        "uz": "Jinsingiz qanday?",
+        "en": "What is your gender?"
+      },
+      "options": {
+        "ru": ["Мужской", "Женский"],
+        "uz": ["Erkak", "Ayol"],
+        "en": ["Male", "Female"]
+      }
+    }
+  ],
+  "answers": {}
+}

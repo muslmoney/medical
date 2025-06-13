@@ -1,0 +1,71 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "text": {
+        "ru": "Расскажите о себе",
+        "uz": "O'zingiz haqingizda ayting",
+        "en": "Tell us about yourself"
+      },
+      "type": "text",
+      "options": {}
+    },
+    {
+      "id": 2,
+      "text": {
+        "ru": "Какой ваш любимый цвет?",
+        "uz": "Sevimli rangingiz qanday?",
+        "en": "What is your favorite color?"
+      },
+      "type": "choice",
+      "options": {
+        "ru": [
+          "Красный",
+          "Синий",
+          "Зелёный"
+        ],
+        "uz": [
+          "Qizil",
+          "Ko'k",
+          "Yashil"
+        ],
+        "en": [
+          "Red",
+          "Blue",
+          "Green"
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "text": {
+        "ru": "gjhy",
+        "uz": "dwfjsd",
+        "en": "sdf"
+      },
+      "type": "choice",
+      "options": {
+        "ru": [
+          "sadfsdf",
+          "err"
+        ],
+        "uz": [
+          "sdf. fdsf"
+        ],
+        "en": [
+          "sdf",
+          "sdfsd"
+        ]
+      }
+    }
+  ],
+  "answers": {
+    "572979988": {
+      "lang": "uz",
+      "answers": {
+        "1": "Yashil",
+        "2": "sdfsd"
+      }
+    }
+  }
+}

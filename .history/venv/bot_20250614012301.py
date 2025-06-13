@@ -1,0 +1,278 @@
+import json
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+
+ADMIN_ID = [572979988, 103525470]
+TOKEN = "7366253745:AAEGD7nh93tBAg-g70ZDXlpyRnEaT_xXLkk"
+DATA_FILE = "questions.json"
+
+LANGUAGES = {
+    "Русский": "ru",
+    "O'zbekcha": "uz",
+    "English": "en"
+}
+
+admin_keyboard = [
+    ["📋 Список вопросов", "➕ Добавить вопрос"],
+    ["✏️ Редактировать вопрос", "📤 Переместить вопрос"],
+    ["❌ Удалить вопрос", "📊 Ответы пользователей"]
+]
+
+cancel_keyboard = [["🔙 Отмена"]]
+
+def load_data():
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def save_data(data):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    buttons = [[lang] for lang in LANGUAGES]
+    await update.message.reply_text("🌐 Выберите язык:", reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True))
+    context.user_data["step"] = -1
+
+async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = LANGUAGES.get(update.message.text.strip())
+    if not lang:
+        await update.message.reply_text("⚠️ Пожалуйста, выберите язык через кнопку.")
+        return
+    context.user_data["lang"] = lang
+    context.user_data["step"] = 0
+    context.user_data["answers"] = {}
+    await send_question(update, context)
+
+async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    step = context.user_data.get("step", 0)
+    lang = context.user_data.get("lang", "ru")
+
+    if step >= len(data["questions"]):
+        data["answers"][str(update.effective_user.id)] = context.user_data["answers"]
+        save_data(data)
+        await update.message.reply_text("✅ Спасибо за участие!", reply_markup=ReplyKeyboardRemove())
+        return
+
+    q = data["questions"][step]
+    context.user_data["current_question"] = q
+    text = q["text"].get(lang, q["text"].get("ru", "❓"))
+
+    if q["type"] == "choice":
+        options = q.get("options", {}).get(lang, [])
+        keyboard = [[opt] for opt in options] + [["Другое"], ["🔙 Отмена"]]
+        markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    else:
+        markup = ReplyKeyboardMarkup([["🔙 Отмена"]], resize_keyboard=True)
+
+    await update.message.reply_text(text, reply_markup=markup)
+
+async def cancel_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    await update.message.reply_text("❌ Действие отменено.", reply_markup=ReplyKeyboardRemove())
+
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id not in ADMIN_ID:
+        await update.message.reply_text("⛔ Только для админа.")
+        return
+    await update.message.reply_text("🔧 Админ-панель:", reply_markup=ReplyKeyboardMarkup(admin_keyboard, resize_keyboard=True))
+
+async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip()
+    user_id = str(update.effective_user.id)
+    data = load_data()
+
+    if text.lower() in ["🔙", "отмена", "🔙 отмена"]:
+        await cancel_action(update, context)
+        return
+
+    if context.user_data.get("step") == -1:
+        await handle_language_selection(update, context)
+        return
+
+    if user_id in map(str, ADMIN_ID):
+        action = context.user_data.get("admin_action")
+
+        if text in [btn for row in admin_keyboard for btn in row]:
+            if text == "📋 Список вопросов":
+                msg = "📋 Вопросы:\n\n"
+                for q in data["questions"]:
+                    msg += f"{q['id']}. {q['text'].get('ru', '❓')} ({q['type']})\n"
+                await update.message.reply_text(msg)
+            elif text == "➕ Добавить вопрос":
+                context.user_data.update({
+                    "admin_action": "add_question_text",
+                    "lang_order": list(LANGUAGES.values()),
+                    "lang_step": 0,
+                    "new_q_text": {},
+                })
+                await update.message.reply_text("📝 Введите текст вопроса на ru:")
+            elif text == "📤 Переместить вопрос":
+                context.user_data["admin_action"] = "move_question"
+                await update.message.reply_text("Введите номера: откуда и куда, через пробел:")
+            elif text == "❌ Удалить вопрос":
+                context.user_data["admin_action"] = "delete_question"
+                await update.message.reply_text("Введите номер вопроса для удаления:")
+            elif text == "✏️ Редактировать вопрос":
+                context.user_data["admin_action"] = "edit_question"
+                await update.message.reply_text("Введите номер вопроса для редактирования:")
+            elif text == "📊 Ответы пользователей":
+                msg = "📊 Ответы:\n\n"
+                for uid, ans in data.get("answers", {}).items():
+                    msg += f"👤 {uid}:\n"
+                    for qid, val in ans.items():
+                        msg += f"  {qid}: {val}\n"
+                await update.message.reply_text(msg or "Ответов нет.")
+            return
+
+        # добавление вопроса
+        if action == "add_question_text":
+            lang = context.user_data["lang_order"][context.user_data["lang_step"]]
+            context.user_data["new_q_text"][lang] = text
+            context.user_data["lang_step"] += 1
+            if context.user_data["lang_step"] >= len(context.user_data["lang_order"]):
+                context.user_data["admin_action"] = "select_type"
+                await update.message.reply_text("📌 Выберите тип вопроса:", reply_markup=ReplyKeyboardMarkup([["📝 Текст", "📋 Выбор"]], resize_keyboard=True))
+            else:
+                next_lang = context.user_data["lang_order"][context.user_data["lang_step"]]
+                await update.message.reply_text(f"📝 Введите текст вопроса на {next_lang}:")
+            return
+
+        if action == "select_type":
+            if "текст" in text.lower():
+                new_q = {
+                    "id": len(data["questions"]) + 1,
+                    "type": "text",
+                    "text": context.user_data["new_q_text"],
+                    "options": {}
+                }
+                data["questions"].append(new_q)
+                save_data(data)
+                await update.message.reply_text("✅ Вопрос добавлен.")
+                context.user_data.clear()
+            elif "выбор" in text.lower():
+                context.user_data["new_q_options"] = {}
+                context.user_data["lang_step"] = 0
+                context.user_data["admin_action"] = "add_options"
+                await update.message.reply_text("🔢 Введите варианты ответа на ru через запятую:")
+            return
+
+        if action == "add_options":
+            lang = context.user_data["lang_order"][context.user_data["lang_step"]]
+            context.user_data["new_q_options"][lang] = [x.strip() for x in text.split(",")]
+            context.user_data["lang_step"] += 1
+            if context.user_data["lang_step"] >= len(context.user_data["lang_order"]):
+                new_q = {
+                    "id": len(data["questions"]) + 1,
+                    "type": "choice",
+                    "text": context.user_data["new_q_text"],
+                    "options": context.user_data["new_q_options"]
+                }
+                data["questions"].append(new_q)
+                save_data(data)
+                await update.message.reply_text("✅ Вопрос с вариантами добавлен.")
+                context.user_data.clear()
+            else:
+                next_lang = context.user_data["lang_order"][context.user_data["lang_step"]]
+                await update.message.reply_text(f"🔢 Введите варианты ответа на {next_lang} через запятую:")
+            return
+
+        if action == "delete_question":
+            try:
+                idx = int(text) - 1
+                if 0 <= idx < len(data["questions"]):
+                    del data["questions"][idx]
+                    for i, q in enumerate(data["questions"]):
+                        q["id"] = i + 1
+                    save_data(data)
+                    await update.message.reply_text("✅ Вопрос удалён.")
+                else:
+                    await update.message.reply_text("❗ Неверный номер.")
+            except:
+                await update.message.reply_text("⚠️ Введите корректный номер.")
+            context.user_data.clear()
+            return
+
+        if action == "move_question":
+            try:
+                src, dest = map(int, text.split())
+                qlist = data["questions"]
+                if 1 <= src <= len(qlist) and 1 <= dest <= len(qlist):
+                    q = qlist.pop(src - 1)
+                    qlist.insert(dest - 1, q)
+                    for i, q in enumerate(qlist): q["id"] = i + 1
+                    save_data(data)
+                    await update.message.reply_text("↕️ Перемещено.")
+                else:
+                    await update.message.reply_text("⚠️ Неверный номер.")
+            except:
+                await update.message.reply_text("⚠️ Ошибка ввода.")
+            context.user_data.clear()
+            return
+
+        if action == "edit_question":
+            try:
+                idx = int(text) - 1
+                if 0 <= idx < len(data["questions"]):
+                    context.user_data["edit_index"] = idx
+                    context.user_data["lang_step"] = 0
+                    context.user_data["lang_order"] = list(LANGUAGES.values())
+                    context.user_data["admin_action"] = "edit_text"
+                    await update.message.reply_text("📝 Новый текст на ru:")
+                else:
+                    await update.message.reply_text("❗ Неверный номер.")
+            except:
+                await update.message.reply_text("⚠️ Ошибка ввода.")
+            return
+
+        if action == "edit_text":
+            lang = context.user_data["lang_order"][context.user_data["lang_step"]]
+            idx = context.user_data["edit_index"]
+            data["questions"][idx]["text"][lang] = text
+            context.user_data["lang_step"] += 1
+            if context.user_data["lang_step"] >= len(context.user_data["lang_order"]):
+                save_data(data)
+                await update.message.reply_text("✅ Тексты обновлены.")
+                context.user_data.clear()
+            else:
+                next_lang = context.user_data["lang_order"][context.user_data["lang_step"]]
+                await update.message.reply_text(f"📝 Новый текст на {next_lang}:")
+            return
+
+    # обычный пользователь
+    q = context.user_data.get("current_question")
+    if not q:
+        await update.message.reply_text("⚠️ Используйте /start для начала.")
+        return
+
+    lang = context.user_data.get("lang", "ru")
+
+    if q["type"] == "choice":
+        options = q.get("options", {}).get(lang, [])
+        if text == "Другое":
+            context.user_data["awaiting_other"] = True
+            await update.message.reply_text("✍️ Введите свой вариант:")
+            return
+        if context.user_data.get("awaiting_other"):
+            answer = text
+            context.user_data["awaiting_other"] = False
+        elif text not in options:
+            await update.message.reply_text("⚠️ Выберите вариант с кнопки.")
+            return
+        else:
+            answer = text
+    else:
+        answer = text
+
+    context.user_data["answers"][str(q["id"])] = answer
+    context.user_data["step"] += 1
+    await send_question(update, context)
+
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("cancel", cancel_action))
+    app.add_handler(CommandHandler("admin", admin_panel))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_answer))
+    app.run_polling()

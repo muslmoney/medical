@@ -1,0 +1,29 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "text": {
+        "ru": "Какой ваш любимый цвет?",
+        "": "What is your favorite color?"
+      },
+      "type": "choice",
+      "options": {
+        "ru": ["Красный", "Синий", "Зелёный"],
+        "en": ["Red", "Blue", "Green"]
+      }
+    },
+    {
+      "id": 2,
+      "text": {
+        "ru": "Напишите отзыв:",
+        "en": "Write a review:"
+      },
+      "type": "text",
+      "options": {
+        "ru": [],
+        "en": []
+      }
+    }
+  ],
+  "answers": {}
+}

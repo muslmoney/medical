@@ -1,0 +1,56 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "type": "choice",
+      "text": {
+        "ru": "1fit kberasizmi?",
+        "uz": "1fit kberasizmi?",
+        "en": "1fit kberasizmi?"
+      },
+      "options": {
+        "ru": [
+          "da",
+          "net"
+        ],
+        "uz": [
+          "da",
+          "net"
+        ],
+        "en": [
+          "da",
+          "net"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "type": "choice",
+      "text": {
+        "ru": "Какой у вас пол?",
+        "uz": "Jinsingiz qanday?",
+        "en": "What is your gender?"
+      },
+      "options": {
+        "ru": [
+          "Мужской",
+          "Женский"
+        ],
+        "uz": [
+          "Erkak",
+          "Ayol"
+        ],
+        "en": [
+          "Male",
+          "Female"
+        ]
+      }
+    }
+  ],
+  "answers": {
+    "572979988": {
+      "1": "sdf",
+      "2": "sdf"
+    }
+  }
+}
