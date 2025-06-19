@@ -16,9 +16,9 @@ LANGUAGES = {
 
 TEXTS = {
     "thank_you": {
-        "ru": "✅ Спасибо за участие!\n\n🔄 Хотите пройти опрос заново?",
-        "uz": "✅ Ishtirokingiz uchun rahmat!\n\n🔄 So‘rovnomani qayta boshlaysizmi?",
-        "en": "✅ Thank you for your participation!\n\n🔄 Want to start again?"
+        "ru": "✅ Спасибо за участие!",
+        "uz": "✅ Ishtirokingiz uchun rahmat!",
+        "en": "✅ Thank you for your participation!"
     },
     "choose_lang": {
         "ru": "🌐 Выберите язык:",
@@ -62,11 +62,6 @@ BUTTONS = {
         "ru": "Другое",
         "uz": "Boshqa",
         "en": "Other"
-    },
-    "restart": {
-        "ru": "🔄 Начать заново",
-        "uz": "🔄 Qaytadan boshlash",
-        "en": "🔄 Restart"
     }
 }
 
@@ -123,12 +118,7 @@ async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if step >= len(data["questions"]):
         save_user_answers(update, context)
-        restart_button = [[BUTTONS["restart"][lang]]]
-        await update.message.reply_text(
-            TEXTS["thank_you"][lang],
-            reply_markup=ReplyKeyboardMarkup(restart_button, resize_keyboard=True)
-        )
-        context.user_data.clear()
+        await update.message.reply_text(TEXTS["thank_you"][lang], reply_markup=ReplyKeyboardRemove())
         return
 
     q = data["questions"][step]
@@ -162,11 +152,6 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     data = load_data()
     lang = context.user_data.get("lang", "ru")
-
-    # 🔄 Начать заново
-    if any(text == BUTTONS["restart"][code] for code in LANGUAGES.values()):
-        await start(update, context)
-        return
 
     if text.lower() in ["🔙", "отмена", "🔙 отмена", BUTTONS["cancel"][lang].lower()]:
         await cancel_action(update, context)
@@ -329,7 +314,6 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"📝 Новый текст на {next_lang}:")
             return
 
-    # Ответ пользователя на вопрос
     q = context.user_data.get("current_question")
     if not q:
         await update.message.reply_text(TEXTS["use_start"][lang])
@@ -337,7 +321,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if q["type"] == "choice":
         options = q.get("options", {}).get(lang, [])
-        if text == BUTTONS["other"][lang]:
+        if text == BUTTONS["other"].get(lang, "Другое"):
             context.user_data["awaiting_other"] = True
             await update.message.reply_text(TEXTS["enter_custom"][lang])
             return

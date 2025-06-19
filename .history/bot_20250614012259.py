@@ -1,12 +1,10 @@
 import json
-from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 ADMIN_ID = [572979988, 103525470]
-TOKEN = "7539569165:AAF6TUZAS0vZAHe7wGS4iKwesfDsnXPbTVA"
+TOKEN = "7366253745:AAEGD7nh93tBAg-g70ZDXlpyRnEaT_xXLkk"
 DATA_FILE = "questions.json"
-ANSWERS_FILE = "answers.json"
 
 LANGUAGES = {
     "Русский": "ru",
@@ -14,67 +12,13 @@ LANGUAGES = {
     "English": "en"
 }
 
-TEXTS = {
-    "thank_you": {
-        "ru": "✅ Спасибо за участие!\n\n🔄 Хотите пройти опрос заново?",
-        "uz": "✅ Ishtirokingiz uchun rahmat!\n\n🔄 So‘rovnomani qayta boshlaysizmi?",
-        "en": "✅ Thank you for your participation!\n\n🔄 Want to start again?"
-    },
-    "choose_lang": {
-        "ru": "🌐 Выберите язык:",
-        "uz": "🌐 Tilni tanlang:",
-        "en": "🌐 Choose your language:"
-    },
-    "cancelled": {
-        "ru": "❌ Действие отменено.",
-        "uz": "❌ Amaliyot bekor qilindi.",
-        "en": "❌ Action cancelled."
-    },
-    "select_from_buttons": {
-        "ru": "⚠️ Выберите вариант с кнопки.",
-        "uz": "⚠️ Tugmalardan birini tanlang.",
-        "en": "⚠️ Please choose from the buttons."
-    },
-    "enter_custom": {
-        "ru": "✍️ Введите свой вариант:",
-        "uz": "✍️ O'z variantingizni kiriting:",
-        "en": "✍️ Enter your own option:"
-    },
-    "use_start": {
-        "ru": "⚠️ Используйте /start для начала.",
-        "uz": "⚠️ Boshlash uchun /start ni bosing.",
-        "en": "⚠️ Use /start to begin."
-    },
-    "invalid_lang": {
-        "ru": "⚠️ Пожалуйста, выберите язык через кнопку.",
-        "uz": "⚠️ Iltimos, tilni tugma orqali tanlang.",
-        "en": "⚠️ Please select a language using the button."
-    }
-}
-
-BUTTONS = {
-    "cancel": {
-        "ru": "🔙 Отмена",
-        "uz": "🔙 Bekor qilish",
-        "en": "🔙 Cancel"
-    },
-    "other": {
-        "ru": "Другое",
-        "uz": "Boshqa",
-        "en": "Other"
-    },
-    "restart": {
-        "ru": "🔄 Начать заново",
-        "uz": "🔄 Qaytadan boshlash",
-        "en": "🔄 Restart"
-    }
-}
-
 admin_keyboard = [
     ["📋 Список вопросов", "➕ Добавить вопрос"],
     ["✏️ Редактировать вопрос", "📤 Переместить вопрос"],
     ["❌ Удалить вопрос", "📊 Ответы пользователей"]
 ]
+
+cancel_keyboard = [["🔙 Отмена"]]
 
 def load_data():
     with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -84,32 +28,16 @@ def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def save_user_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = str(update.effective_user.id)
-    try:
-        with open(ANSWERS_FILE, "r", encoding="utf-8") as f:
-            all_answers = json.load(f)
-    except FileNotFoundError:
-        all_answers = {}
-
-    all_answers[user_id] = {
-        "timestamp": datetime.now().isoformat(),
-        "responses": context.user_data["answers"]
-    }
-
-    with open(ANSWERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(all_answers, f, ensure_ascii=False, indent=2)
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     buttons = [[lang] for lang in LANGUAGES]
-    await update.message.reply_text(TEXTS["choose_lang"]["ru"], reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True))
+    await update.message.reply_text("🌐 Выберите язык:", reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True))
     context.user_data["step"] = -1
 
 async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = LANGUAGES.get(update.message.text.strip())
     if not lang:
-        await update.message.reply_text(TEXTS["invalid_lang"]["ru"])
+        await update.message.reply_text("⚠️ Пожалуйста, выберите язык через кнопку.")
         return
     context.user_data["lang"] = lang
     context.user_data["step"] = 0
@@ -122,34 +50,27 @@ async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "ru")
 
     if step >= len(data["questions"]):
-        save_user_answers(update, context)
-        restart_button = [[BUTTONS["restart"][lang]]]
-        await update.message.reply_text(
-            TEXTS["thank_you"][lang],
-            reply_markup=ReplyKeyboardMarkup(restart_button, resize_keyboard=True)
-        )
-        context.user_data.clear()
+        data["answers"][str(update.effective_user.id)] = context.user_data["answers"]
+        save_data(data)
+        await update.message.reply_text("✅ Спасибо за участие!", reply_markup=ReplyKeyboardRemove())
         return
 
     q = data["questions"][step]
     context.user_data["current_question"] = q
     text = q["text"].get(lang, q["text"].get("ru", "❓"))
-    cancel_btn = BUTTONS["cancel"].get(lang, "🔙 Отмена")
-    other_btn = BUTTONS["other"].get(lang, "Другое")
 
     if q["type"] == "choice":
         options = q.get("options", {}).get(lang, [])
-        keyboard = [[opt] for opt in options] + [[other_btn], [cancel_btn]]
+        keyboard = [[opt] for opt in options] + [["Другое"], ["🔙 Отмена"]]
+        markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     else:
-        keyboard = [[cancel_btn]]
+        markup = ReplyKeyboardMarkup([["🔙 Отмена"]], resize_keyboard=True)
 
-    markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(text, reply_markup=markup)
 
 async def cancel_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = context.user_data.get("lang", "ru")
     context.user_data.clear()
-    await update.message.reply_text(TEXTS["cancelled"][lang], reply_markup=ReplyKeyboardRemove())
+    await update.message.reply_text("❌ Действие отменено.", reply_markup=ReplyKeyboardRemove())
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_ID:
@@ -161,14 +82,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     user_id = str(update.effective_user.id)
     data = load_data()
-    lang = context.user_data.get("lang", "ru")
 
-    # 🔄 Начать заново
-    if any(text == BUTTONS["restart"][code] for code in LANGUAGES.values()):
-        await start(update, context)
-        return
-
-    if text.lower() in ["🔙", "отмена", "🔙 отмена", BUTTONS["cancel"][lang].lower()]:
+    if text.lower() in ["🔙", "отмена", "🔙 отмена"]:
         await cancel_action(update, context)
         return
 
@@ -178,6 +93,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id in map(str, ADMIN_ID):
         action = context.user_data.get("admin_action")
+
         if text in [btn for row in admin_keyboard for btn in row]:
             if text == "📋 Список вопросов":
                 msg = "📋 Вопросы:\n\n"
@@ -202,20 +118,15 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data["admin_action"] = "edit_question"
                 await update.message.reply_text("Введите номер вопроса для редактирования:")
             elif text == "📊 Ответы пользователей":
-                try:
-                    with open(ANSWERS_FILE, "r", encoding="utf-8") as f:
-                        answers = json.load(f)
-                except FileNotFoundError:
-                    answers = {}
-
                 msg = "📊 Ответы:\n\n"
-                for uid, record in answers.items():
-                    msg += f"👤 {uid} ({record.get('timestamp')}):\n"
-                    for qid, val in record["responses"].items():
+                for uid, ans in data.get("answers", {}).items():
+                    msg += f"👤 {uid}:\n"
+                    for qid, val in ans.items():
                         msg += f"  {qid}: {val}\n"
                 await update.message.reply_text(msg or "Ответов нет.")
             return
 
+        # добавление вопроса
         if action == "add_question_text":
             lang = context.user_data["lang_order"][context.user_data["lang_step"]]
             context.user_data["new_q_text"][lang] = text
@@ -329,23 +240,25 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"📝 Новый текст на {next_lang}:")
             return
 
-    # Ответ пользователя на вопрос
+    # обычный пользователь
     q = context.user_data.get("current_question")
     if not q:
-        await update.message.reply_text(TEXTS["use_start"][lang])
+        await update.message.reply_text("⚠️ Используйте /start для начала.")
         return
+
+    lang = context.user_data.get("lang", "ru")
 
     if q["type"] == "choice":
         options = q.get("options", {}).get(lang, [])
-        if text == BUTTONS["other"][lang]:
+        if text == "Другое":
             context.user_data["awaiting_other"] = True
-            await update.message.reply_text(TEXTS["enter_custom"][lang])
+            await update.message.reply_text("✍️ Введите свой вариант:")
             return
         if context.user_data.get("awaiting_other"):
             answer = text
             context.user_data["awaiting_other"] = False
         elif text not in options:
-            await update.message.reply_text(TEXTS["select_from_buttons"][lang])
+            await update.message.reply_text("⚠️ Выберите вариант с кнопки.")
             return
         else:
             answer = text
