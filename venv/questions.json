@@ -1,0 +1,28 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "type": "choice",
+      "text": {
+        "ru": "Какой твой любимый цвет?",
+        "uz": "Sevimli rangingiz qanday?",
+        "en": "What's your favorite color?"
+      },
+      "options": {
+        "ru": ["Красный", "Синий", "Зелёный"],
+        "uz": ["Qizil", "Ko'k", "Yashil"],
+        "en": ["Red", "Blue", "Green"]
+      }
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "text": {
+        "ru": "Расскажи немного о себе.",
+        "uz": "O'zingiz haqingizda qisqacha ayting.",
+        "en": "Tell us a bit about yourself."
+      },
+      "options": {}
+    }
+  ]
+}
