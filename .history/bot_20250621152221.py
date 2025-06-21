@@ -1,3 +1,4 @@
+
 import json
 from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -7,6 +8,7 @@ ADMIN_ID = [572979988, 103525470]
 TOKEN = "7539569165:AAF6TUZAS0vZAHe7wGS4iKwesfDsnXPbTVA"
 DATA_FILE = "questions.json"
 ANSWERS_FILE = "answers.json"
+CHANNEL_ID = -1002283959136  # ID канала для отправки ответов
 
 LANGUAGES = {
     "Русский": "ru",
@@ -84,7 +86,7 @@ def save_data(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def save_user_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def save_user_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
     try:
         with open(ANSWERS_FILE, "r", encoding="utf-8") as f:
@@ -99,6 +101,12 @@ def save_user_answers(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     with open(ANSWERS_FILE, "w", encoding="utf-8") as f:
         json.dump(all_answers, f, ensure_ascii=False, indent=2)
+
+    lang = context.user_data.get("lang", "ru")
+    text_lines = [f"📥 Новый ответ от пользователя {user_id} ({datetime.now().isoformat()}):"]
+    for qid, ans in context.user_data["answers"].items():
+        text_lines.append(f"🔹 {qid}: {ans}")
+    await context.bot.send_message(chat_id=CHANNEL_ID, text="\n".join(text_lines))
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
@@ -122,7 +130,7 @@ async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "ru")
 
     if step >= len(data["questions"]):
-        save_user_answers(update, context)
+        await save_user_answers(update, context)
         restart_button = [[BUTTONS["restart"][lang]]]
         await update.message.reply_text(
             TEXTS["thank_you"][lang],
@@ -145,7 +153,6 @@ async def send_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(text, reply_markup=markup)
-
 async def cancel_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = context.user_data.get("lang", "ru")
     context.user_data.clear()
