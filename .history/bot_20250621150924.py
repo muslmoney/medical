@@ -1,3 +1,8 @@
+
+✅ Весь код с обновлённой функцией save_user_answers и интеграцией в send_question:
+python
+Копировать
+Редактировать
 import json
 from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
